@@ -1,14 +1,14 @@
 /*
  * @Author        : fineemb
  * @Github        : https://github.com/fineemb
- * @Description   : 
+ * @Description   :
  * @Date          : 2019-10-28 16:19:56
  * @LastEditors   : fineemb
  * @LastEditTime  : 2020-04-19 23:56:10
  */
 
 console.info("%c REMOTE CARD \n%c Version 1.2 ",
-"color: orange; font-weight: bold; background: black", 
+"color: orange; font-weight: bold; background: black",
 "color: white; font-weight: bold; background: dimgray");
 
 class RemoteCard extends HTMLElement {
@@ -40,13 +40,6 @@ class RemoteCard extends HTMLElement {
         this.hacard.innerHTML = this._htmlData();
         root.appendChild(this.hacard);
 
-        ["up", "down", "left", "right", "ok"].forEach((dir) => {
-          const el = this.hacard.querySelector(`#l${dir}`);
-          if (el) {
-            el.addEventListener("click", () => this.handleCircleClick(dir));
-          }
-        });
-
         if(this.config.left_buttons){
             this.config.left_buttons.forEach(function(button){
                 let buttonBox = document.createElement('paper-button');
@@ -60,25 +53,37 @@ class RemoteCard extends HTMLElement {
                     if(button.payload)buttonBox.setAttribute("data-payload",button.payload)
                     if(button.server)buttonBox.setAttribute("data-server",button.server)
                     buttonBox.addEventListener('click', (e) => this.selectMode(e),false);
-                this.hacard.querySelector("#right_buttons").appendChild(buttonBox)    
+                this.hacard.querySelector("#right_buttons").appendChild(buttonBox)
             }, this)
         }
-      }
-      handleCircleClick(dir) {
-        const config = this.config.circle?.[dir];
-        if (!config || !config.topic || !config.payload) {
-            console.warn(`未配置 ${dir} 按钮的 MQTT 参数`);
-            return;
-          }
 
-        const data = {
-            topic: config.topic,
-            payload: config.payload,
-            qos: 0,
-            retain: false,
+        const btnMap = {
+          lok: 'ok',
+          lup: 'up',
+          ldown: 'down',
+          lleft: 'left',
+          lright: 'right',
         };
-        this._hass.callService("mqtt", "publish", data);
+
+        btns.forEach(id => {
+          const btn = this.hacard.querySelector(`#${id}`);
+          const key = btnMap[id];
+          if (btn && this.config.circle?.[key]) {
+            btn.dataset.topic = this.config.circle[key].topic;
+            btn.dataset.payload = this.config.circle[key].payload;
+            btn.addEventListener('click', (e) => this.selectMode(e), false);
+          }
+        });
+
+        this.hacard.querySelector("#lok").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#lup").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#ldown").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#lleft").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#lright").addEventListener('click', (e) => this.selectMode(e), false);
+
+
       }
+
       selectMode(e) {
         console.log(e);
         var entity = e.currentTarget.dataset.entity;
@@ -106,7 +111,7 @@ class RemoteCard extends HTMLElement {
         }
     }
       _htmlData(){
-          var html = `       
+          var html = `
           <div id="remote" class="remote_f">
               <div class="box">
               <div class="scale">
@@ -137,11 +142,11 @@ class RemoteCard extends HTMLElement {
                           <div id="ldown" class="tap down"></div>
                       </div>
                       <div id="lok" class="inner-circle ok">
-                      </div>        
+                      </div>
                   </div>
-              </div>  
               </div>
-              </div>  
+              </div>
+              </div>
               <div class="boxb">
                   <div id="right_buttons">
                   </div>
@@ -161,7 +166,7 @@ class RemoteCard extends HTMLElement {
         .f-ha-card{
             padding: 1pc;
             background: var(--paper-card-background-color);
-            
+
         }
 
         .box {
@@ -263,7 +268,7 @@ class RemoteCard extends HTMLElement {
             background-color: var(--accent-color);
             text-align: center;
             box-shadow: 1px 1px 6px rgba(0, 0, 0, 0.6);
-        } 
+        }
         .tap{
             position: relative;
             width: 100%;
