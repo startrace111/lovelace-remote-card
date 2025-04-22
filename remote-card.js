@@ -57,6 +57,58 @@ class RemoteCard extends HTMLElement {
             }, this)
         }
 
+        // let btnOk = this.hacard.querySelector("#lok");
+        // btnOk.dataset.topic = this.config.ok_button_topic;
+        // btnOk.dataset.payload = this.config.ok_button_payload;
+        // btnOk.addEventListener('click', (e) => this.selectMode(e), false);
+        //
+        // let btnUp = this.hacard.querySelector("#lup");
+        // btnUp.dataset.topic = this.config.up_button_topic;
+        // btnUp.dataset.payload = this.config.up_button_payload;
+        // btnUp.addEventListener('click', (e) => this.selectMode(e), false);
+        //
+        // let btnDown = this.hacard.querySelector("#ldown");
+        // btnDown.dataset.topic = this.config.down_button_topic;
+        // btnDown.dataset.payload = this.config.down_button_payload;
+        // btnDown.addEventListener('click', (e) => this.selectMode(e), false);
+
+        // const btns = ['lok', 'lup', 'ldown', 'lleft', 'lright'];
+        // btns.forEach(id => {
+        //   const btn = this.hacard.querySelector(`#${id}`);
+        //   if (btn) {
+        //     btn.dataset.topic = this.config[`${id}_button_topic`];
+        //     btn.dataset.payload = this.config[`${id}_button_payload`];
+        //     btn.addEventListener('click', (e) => this.selectMode(e), false);
+        //   } else {
+        //     console.warn(`按钮 #${id} 未找到，无法绑定点击事件`);
+        //   }
+        // });
+
+        const btnMap = {
+          lok: 'ok',
+          lup: 'up',
+          ldown: 'down',
+          lleft: 'left',
+          lright: 'right',
+        };
+
+        btns.forEach(id => {
+          const btn = this.hacard.querySelector(`#${id}`);
+          const key = btnMap[id];
+          if (btn && this.config.circle?.[key]) {
+            btn.dataset.topic = this.config.circle[key].topic;
+            btn.dataset.payload = this.config.circle[key].payload;
+            btn.addEventListener('click', (e) => this.selectMode(e), false);
+          }
+        });
+
+        this.hacard.querySelector("#lok").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#lup").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#ldown").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#lleft").addEventListener('click', (e) => this.selectMode(e), false);
+        this.hacard.querySelector("#lright").addEventListener('click', (e) => this.selectMode(e), false);
+
+
       }
 
       selectMode(e) {
