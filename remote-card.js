@@ -17,16 +17,16 @@ class RemoteCard extends HTMLElement {
         this.attachShadow({ mode: 'open' });
     }
 
-    set hass(hass) {
-        this._hass = hass;
-        this._entity = this.config.entity;
-        this.hacard.querySelector("#remote").className = this._hass.states[this._entity].state;
-
-    }
+    // set hass(hass) {
+    //     this._hass = hass;
+    //     this._entity = this.config.entity;
+    //     this.hacard.querySelector("#remote").className = this._hass.states[this._entity].state;
+    //
+    // }
 
     setConfig(config) {
         if (!config.entity) {
-          throw new Error('你需要定义一个实体');
+            throw new Error('你需要定义一个实体');
         }
         this.config = deepClone(config);
 
@@ -41,29 +41,223 @@ class RemoteCard extends HTMLElement {
         root.appendChild(this.hacard);
 
         ["up", "down", "left", "right", "ok"].forEach((dir) => {
-          const el = this.hacard.querySelector(`#l${dir}`);
-          if (el) {
-            el.addEventListener("click", () => this.handleCircleClick(dir));
-          }
+            const el = this.hacard.querySelector(`#l${dir}`);
+            if (el) {
+                el.addEventListener("click", () => this.handleCircleClick(dir));
+            }
         });
 
-        if(this.config.left_buttons){
-            this.config.left_buttons.forEach(function(button){
+        if (this.config.left_buttons) {
+            this.config.left_buttons.forEach(function (button) {
                 let buttonBox = document.createElement('paper-button');
-                    buttonBox.innerHTML = `
+                buttonBox.innerHTML = `
                         <div class="lbicon">
-                            <ha-icon class="ha-icon" data-state="on" icon="`+button.icon+`"></ha-icon>
+                            <ha-icon class="ha-icon" data-state="on" icon="` + button.icon + `"></ha-icon>
                         </div>
                     `;
-                    buttonBox.setAttribute("data-entity",button.entity)
-                    if(button.topic)buttonBox.setAttribute("data-topic",button.topic)
-                    if(button.payload)buttonBox.setAttribute("data-payload",button.payload)
-                    if(button.server)buttonBox.setAttribute("data-server",button.server)
-                    buttonBox.addEventListener('click', (e) => this.selectMode(e),false);
-                this.hacard.querySelector("#right_buttons").appendChild(buttonBox)    
+                buttonBox.setAttribute("data-entity", button.entity)
+                if (button.topic) buttonBox.setAttribute("data-topic", button.topic)
+                if (button.payload) buttonBox.setAttribute("data-payload", button.payload)
+                if (button.server) buttonBox.setAttribute("data-server", button.server)
+                buttonBox.addEventListener('click', (e) => this.selectMode(e), false);
+                this.hacard.querySelector("#right_buttons").appendChild(buttonBox)
             }, this)
         }
+
+        const macroContainer = document.createElement('div');
+        macroContainer.className = 'macro-container';
+
+        (this.config.macros || []).forEach((macro, idx) => {
+            const macroBox = document.createElement('div');
+            macroBox.className = 'macro-box';
+
+            const nameEntity = `input_text.macro_name_${idx}`;
+            const cmdEntity = `input_text.macro_cmd_${idx}`;
+
+            // const savedName = this._hass?.states?.[nameEntity]?.state || macro.name || `宏${idx + 1}`;
+            // const savedCommand = this._hass?.states?.[cmdEntity]?.state || macro.default || '';
+            //
+            // const nameInput = macroBox.querySelector(`#macro_name_${idx}`);
+            // const cmdInput = macroBox.querySelector(`#macro_input_${idx}`);
+            //
+            // if (nameInput) nameInput.value = savedName;
+            // if (cmdInput) cmdInput.value = savedCommand;
+
+            macroBox.innerHTML = `
+          <label id="macro_label_${idx}">宏${idx + 1}</label>
+          <input type="text" id="macro_name_${idx}" placeholder="宏名称" />
+          <input type="text" id="macro_input_${idx}" placeholder="指令内容" />
+          <button id="macro_send_${idx}">发送</button>
+        `;
+
+            macroContainer.appendChild(macroBox);
+        });
+        this.hacard.appendChild(macroContainer);
+
+
+        // 2. 插入样式（🌟 放在 appendChild 后）
+        const macroStyle = document.createElement('style');
+        macroStyle.textContent = `
+          .macro-container {
+            margin-top: 16px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
+          .macro-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .macro-box input {
+            flex: 1;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+          }
+          .macro-box button {
+            padding: 4px 10px;
+            border: none;
+            background-color: #1976d2;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+          }
+          .macro-box button:hover {
+            background-color: #125ca1;
+          }
+        `;
+        this.hacard.appendChild(macroStyle);
+
+        // 新增：添加两个状态显示区域
+        const statusContainer = document.createElement('div');
+        statusContainer.className = 'status-container';
+
+        // 添加投影仪状态显示
+        const projectorStatus = document.createElement('div');
+        projectorStatus.className = 'status-item';
+        projectorStatus.innerHTML = `<span>投影仪状态:</span> <span id="projector_status">加载中...</span>`;
+        statusContainer.appendChild(projectorStatus);
+
+        // 添加遥控器状态显示
+        const remoteStatus = document.createElement('div');
+        remoteStatus.className = 'status-item';
+        remoteStatus.innerHTML = `<span>遥控器状态:</span> <span id="remote_status">加载中...</span>`;
+        statusContainer.appendChild(remoteStatus);
+
+        //this.hacard.appendChild(statusContainer);
+        // 把状态显示区域插入到卡片的最上方
+        this.hacard.prepend(statusContainer);  // 使用 prepend 将状态容器放到最前面
+        root.appendChild(this.hacard);
+
+        // 添加样式
+        const statusStyle = document.createElement('style');
+        statusStyle.textContent = `
+          .status-container {
+            margin-top: 16px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
+          .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .status-item span {
+            font-size: 14px;
+          }
+        `;
+        this.hacard.appendChild(statusStyle);
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._entity = this.config.entity;
+
+      // ✅ 保留原有逻辑
+      const remote = this.hacard?.querySelector("#remote");
+      if (remote && hass.states[this._entity]) {
+        remote.className = hass.states[this._entity].state;
       }
+
+      // ✅ 新增：同步宏部分输入框与实体值
+      (this.config.macros || []).forEach((macro, idx) => {
+        const nameEntity = `input_text.macro_name_${idx}`;
+        const cmdEntity = `input_text.macro_cmd_${idx}`;
+
+        const nameInput = this.hacard.querySelector(`#macro_name_${idx}`);
+        const cmdInput = this.hacard.querySelector(`#macro_input_${idx}`);
+        const label = this.hacard.querySelector(`#macro_label_${idx}`);
+        const btn = this.hacard.querySelector(`#macro_send_${idx}`);
+
+        const savedName = hass.states?.[nameEntity]?.state || macro.name || `宏${idx + 1}`;
+        const savedCommand = hass.states?.[cmdEntity]?.state || macro.default || '';
+
+        // if (nameInput) nameInput.value = savedName;
+        // if (cmdInput) cmdInput.value = savedCommand;
+        // 仅在用户未修改输入框时才更新
+        if (nameInput && !nameInput.hasAttribute('data-modified')) {
+            nameInput.value = savedName;
+        }
+        if (cmdInput && !cmdInput.hasAttribute('data-modified')) {
+            cmdInput.value = savedCommand;
+        }
+        if (label) label.innerText = savedName;
+
+        if (btn) {
+          btn.onclick = () => {
+            const name = nameInput.value.trim();
+            const cmd = cmdInput.value.trim();
+
+            // 写入 Home Assistant 的 input_text 实体
+            if (hass.states[nameEntity]) {
+              hass.callService('input_text', 'set_value', {
+                entity_id: nameEntity,
+                value: name,
+              });
+            }
+            if (hass.states[cmdEntity]) {
+              hass.callService('input_text', 'set_value', {
+                entity_id: cmdEntity,
+                value: cmd,
+              });
+            }
+
+            const topic = macro.topic;
+            this.handleMacroSend(cmd, topic);
+          };
+        }
+        // 标记为已修改
+        if (nameInput) {
+            nameInput.addEventListener('input', () => {
+                nameInput.setAttribute('data-modified', 'true');
+            });
+        }
+
+        if (cmdInput) {
+            cmdInput.addEventListener('input', () => {
+                cmdInput.setAttribute('data-modified', 'true');
+            });
+        }
+      });
+      // 新增：更新投影仪和遥控器状态
+      const projectorStatusElement = this.hacard.querySelector('#projector_status');
+      const remoteStatusElement = this.hacard.querySelector('#remote_status');
+
+      const projectorState = hass.states?.['binary_sensor.esp32_tou_ying_yao_kong_qi_tou_ying_yi_zhuang_tai']?.state;
+      const remoteState = hass.states?.['binary_sensor.esp32_tou_ying_yao_kong_qi_yao_kong_qi_zai_xian_zhuang_tai']?.state;
+
+      if (projectorStatusElement) {
+          projectorStatusElement.innerText = projectorState === 'on' ? '开启' : '关闭';
+      }
+
+      if (remoteStatusElement) {
+          remoteStatusElement.innerText = remoteState === 'on' ? '在线' : '离线';
+      }
+    }
+
       handleCircleClick(dir) {
         const config = this.config.circle?.[dir];
         if (!config || !config.topic || !config.payload) {
@@ -79,6 +273,18 @@ class RemoteCard extends HTMLElement {
         };
         this._hass.callService("mqtt", "publish", data);
       }
+
+      handleMacroSend(macroStr, topic) {
+          const payload = macroStr;
+
+          if (this._hass && topic && payload) {
+            this._hass.callService('mqtt', 'publish', {
+              topic,
+              payload,
+            });
+          }
+        }
+
       selectMode(e) {
         console.log(e);
         var entity = e.currentTarget.dataset.entity;
